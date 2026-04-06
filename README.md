@@ -4,15 +4,13 @@
 
 ```bash
 git clone https://github.com/johnazariah/quokka-cookbook
-pip install quokka
-quokka recipes/01-bell-state/bell.qasm
 ```
 
-Pick a recipe. Read why it matters. Run it.
+Pick a recipe. Read why it matters. Run it on your [Quokka](https://www.quokkacomputing.com/).
 
 ## What is this?
 
-A collection of self-contained quantum computing recipes, each built around a real problem and a working [OpenQASM 2.0](https://openqasm.com/) circuit that runs on [quokka](https://github.com/XXX/quokka).
+A collection of self-contained quantum computing recipes, each built around a real problem and a working [OpenQASM 2.0](https://openqasm.com/) circuit that runs on [Quokka](https://www.quokkacomputing.com/) — a 30-qubit quantum computing system designed for education and exploration.
 
 No framework boilerplate. No 47 imports. Just circuits, explained.
 
@@ -40,10 +38,10 @@ Read the README, run the `.qasm` file, compare with `expected.txt`.
 
 ## Prerequisites
 
-- [quokka](https://github.com/XXX/quokka) installed
+- A [Quokka](https://www.quokkacomputing.com/) puck, or the Quokka app ([iOS](https://apps.apple.com/au/app/quokka-quantum/id6754873585))
 - Curiosity
 
-That's it. Linear algebra and quantum mechanics are introduced *as needed*, in context, inside each recipe.
+That's it. Every recipe is a standard OpenQASM 2.0 file — paste it into your Quokka and run. Linear algebra and quantum mechanics are introduced *as needed*, in context, inside each recipe.
 
 ## Contributing
 

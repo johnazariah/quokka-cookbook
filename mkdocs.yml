@@ -1,49 +1,93 @@
 site_name: The Quokka Cookbook
 site_description: Quantum computing recipes you can actually run
+site_author: John Azariah
 site_url: https://johnazariah.github.io/quokka-cookbook
 
-repo_url: https://github.com/johnazariah/quokka-cookbook
 repo_name: johnazariah/quokka-cookbook
+repo_url: https://github.com/johnazariah/quokka-cookbook
 
 theme:
   name: material
+  logo: assets/logo.png
+  favicon: assets/favicon.png
   palette:
     - scheme: default
-      primary: deep purple
-      accent: amber
+      primary: teal
+      accent: deep orange
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: deep purple
-      accent: amber
+      primary: teal
+      accent: deep orange
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
   features:
     - content.code.copy
     - content.code.annotate
     - navigation.sections
     - navigation.expand
     - navigation.top
+    - navigation.tabs
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
 
-markdown_extensions:
-  - pymdownx.highlight:
-      anchor_linenums: true
-  - pymdownx.superfences
-  - pymdownx.arithmatex:
-      generic: true
-  - admonitions
-  - pymdownx.details
-  - attr_list
-  - md_in_html
-
-extra_javascript:
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+plugins:
+  - search
 
 nav:
   - Home: index.md
+  - Getting Started: getting-started.md
   - Recipes:
-    - "01 — Bell State": recipes/01-bell-state/README.md
-    - "02 — Teleportation": recipes/02-teleportation/README.md
-    - "03 — Deutsch-Jozsa": recipes/03-deutsch-jozsa/README.md
+    - Overview: recipes/index.md
+    - Appetizers:
+      - "01 — Bell State": recipes/01-bell-state/README.md
+      - "02 — Teleportation": recipes/02-teleportation/README.md
+      - "03 — Deutsch-Jozsa": recipes/03-deutsch-jozsa/README.md
+    - Mains: recipes/mains-coming-soon.md
+    - Desserts: recipes/desserts-coming-soon.md
+  - Learning Path: learning-path.md
+  - References: references.md
+  - About: about.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+  - def_list
+  - footnotes
+  - tables
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/johnazariah/quokka-cookbook
+
+copyright: Copyright &copy; 2026 John Azariah

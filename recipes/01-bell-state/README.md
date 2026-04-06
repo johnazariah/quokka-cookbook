@@ -11,7 +11,7 @@ It's also the simplest interesting quantum circuit you can build: two gates, two
 - 2 qubits
 - 1 Hadamard gate (`h`)
 - 1 CNOT gate (`cx`)
-- [quokka](https://github.com/XXX/quokka) installed
+- A [Quokka](https://www.quokkacomputing.com/) (puck or app)
 
 No prior quantum knowledge required. We'll explain everything as we go.
 
@@ -113,11 +113,7 @@ q[1] : ─────────X─── M ───
 
 ## Taste test
 
-Run it:
-
-```bash
-quokka recipes/01-bell-state/bell.qasm
-```
+Copy the contents of [`bell.qasm`](bell.qasm) and paste it into your Quokka app or load it onto your Quokka puck.
 
 You should see something like:
 
@@ -125,7 +121,7 @@ You should see something like:
 {'00': 0.5, '11': 0.5}
 ```
 
-Or, if quokka samples shots:
+Or, if Quokka samples shots:
 
 ```
 {'00': 512, '11': 488}
