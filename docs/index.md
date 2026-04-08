@@ -5,27 +5,53 @@ hide:
 
 # The Quokka Cookbook
 
-<div class="grid" markdown>
-
-**Quantum computing recipes you can actually run.** No framework bloat. No 47 imports. Just circuits, explained — then executed.
-
-</div>
+**Quantum computing recipes you can actually run.**
 
 ---
 
-## The idea
+## What is this?
+
+A growing collection of self-contained quantum computing recipes — each one explains a concept from the ground up, builds a circuit step by step, and gives you a working [OpenQASM 2.0](https://openqasm.com/) program you can run on your [Quokka](https://www.quokkacomputing.com/).
+
+No framework bloat. No 47 imports. No prerequisites beyond curiosity. Just circuits, explained — then executed.
+
+## Why we're building this
 
 Most quantum computing resources teach you qubits and gates, then leave you stranded somewhere around phase kickback wondering *why you should care*.
 
-We do it the other way around. Each recipe starts with a **problem** — something concrete and interesting — then builds the quantum circuit that solves it, step by step, in standard [OpenQASM 2.0](https://openqasm.com/). Every recipe runs on [Quokka](https://www.quokkacomputing.com/) — a 30-qubit quantum computing system you can hold in your hand.
+We do it the other way around. Each recipe starts with a **problem** — something concrete and interesting — then builds the quantum circuit that solves it. Theory arrives when it's useful, not when it's scheduled. Phase kickback shows up when it saves you a measurement, not because it's Chapter 3.
 
-**Clone it. Read it. Run it on your Quokka.**
+The goal is **understanding through doing**. If you can read a `for` loop, you can read a quantum circuit. And if you can run one, you'll understand it better than if you'd read ten pages of formalism.
 
-```bash
-git clone https://github.com/johnazariah/quokka-cookbook
-```
+## What's Quokka?
 
-Open any `.qasm` file, paste it into your Quokka, and see the results.
+<div class="grid cards" markdown>
+
+-   :material-cube-outline:{ .lg .middle } **A quantum computer in your hand**
+
+    ---
+
+    [Quokka](https://www.quokkacomputing.com/) is a 30-qubit quantum computing system built by [Eigensystems](https://www.quokkacomputing.com/) in Australia. It's a physical device — a puck that fits in your hand — with a companion [iOS app](https://apps.apple.com/au/app/quokka-quantum/id6754873585) and cloud platform.
+
+    [:octicons-arrow-right-24: www.quokkacomputing.com](https://www.quokkacomputing.com/)
+
+-   :material-file-code-outline:{ .lg .middle } **Standard OpenQASM 2.0**
+
+    ---
+
+    Quokka runs standard [OpenQASM 2.0](https://openqasm.com/) — no proprietary language, no SDK lock-in. Every recipe in this cookbook is a plain text `.qasm` file. What you learn here works everywhere.
+
+</div>
+
+## What's coming
+
+We're releasing recipes regularly, building from the fundamentals to real applications. Each recipe is a self-contained blog post with a runnable circuit.
+
+| | Course | What you'll learn |
+|---|--------|-------------------|
+| **Appetizers** | Bell state, teleportation, Deutsch-Jozsa | Entanglement, measurement, your first quantum speedup |
+| **Mains** | Bernstein-Vazirani, Simon, Grover, QAOA, VQE, QFT | Oracles, search, optimisation, molecular simulation |
+| **Desserts** | Phase estimation, error mitigation, quantum counting | The techniques that power the big algorithms |
 
 !!! tip "How each recipe works"
 
@@ -34,46 +60,8 @@ Open any `.qasm` file, paste it into your Quokka, and see the results.
     1. **What are we making?** — the problem, in plain language
     2. **Ingredients** — what you need to know (with links if you need a refresher)
     3. **Method** — the circuit, built incrementally with explanation at every step
-    4. **Taste test** — run it, see the output, interpret the results
+    4. **Taste test** — run it on your Quokka, see the output, interpret the results
     5. **Chef's notes** — gotchas, deeper connections, and what to try next
-
-## Start cooking
-
-<div class="grid cards" markdown>
-
--   :material-silverware-fork-knife:{ .lg .middle } **Appetizers**
-
-    ---
-
-    The fundamentals: entanglement, teleportation, your first quantum speedup.
-
-    [:octicons-arrow-right-24: Bell State](recipes/01-bell-state/README.md)
-
--   :material-book-open-variant:{ .lg .middle } **Learning Path**
-
-    ---
-
-    Not sure where to start? Follow the guided path from zero to quantum algorithms.
-
-    [:octicons-arrow-right-24: Show me the way](learning-path.md)
-
--   :material-bookshelf:{ .lg .middle } **References**
-
-    ---
-
-    Textbooks, papers, courses, and talks — curated recommendations for going deeper.
-
-    [:octicons-arrow-right-24: Further reading](references.md)
-
--   :material-github:{ .lg .middle } **Contribute**
-
-    ---
-
-    Found a bug? Want to add a recipe? Every recipe is a PR away.
-
-    [:octicons-arrow-right-24: GitHub](https://github.com/johnazariah/quokka-cookbook)
-
-</div>
 
 ## Who is this for?
 
@@ -82,11 +70,47 @@ Open any `.qasm` file, paste it into your Quokka, and see the results.
 - **Researchers** who want a quick reference for standard circuits and protocols
 - **Anyone** who learns by doing rather than by reading axioms
 
-No physics degree required. We introduce every concept when it's needed, in the context of a working circuit. If you can read a `for` loop, you can read a quantum circuit.
+No physics degree required. We introduce every concept when it's needed, in the context of a working circuit.
 
-## What is Quokka?
+## Stay in the loop
 
-[Quokka](https://www.quokkacomputing.com/) is a 30-qubit quantum computing system built by [Eigensystems](https://www.quokkacomputing.com/) in Australia. It's a physical device — a puck that fits in your hand — with a companion app ([iOS](https://apps.apple.com/au/app/quokka-quantum/id6754873585)) and cloud platform. Design circuits, load them onto your Quokka, and see the results. It runs standard OpenQASM 2.0, so there's no proprietary language to learn.
+Recipes drop regularly. [Watch the repo on GitHub](https://github.com/johnazariah/quokka-cookbook) to get notified, or check back here.
+
+<div class="grid cards" markdown>
+
+-   :material-book-open-variant:{ .lg .middle } **Learning Path**
+
+    ---
+
+    The full roadmap — what we'll cover and why, in what order.
+
+    [:octicons-arrow-right-24: See the plan](learning-path.md)
+
+-   :material-bookshelf:{ .lg .middle } **References**
+
+    ---
+
+    Textbooks, papers, courses, and talks — curated for going deeper.
+
+    [:octicons-arrow-right-24: Further reading](references.md)
+
+-   :material-github:{ .lg .middle } **Contribute**
+
+    ---
+
+    Found a typo? Want to suggest a recipe? Every recipe is a PR away.
+
+    [:octicons-arrow-right-24: GitHub](https://github.com/johnazariah/quokka-cookbook)
+
+-   :material-cube-outline:{ .lg .middle } **Get a Quokka**
+
+    ---
+
+    The quantum computing puck these recipes are built for.
+
+    [:octicons-arrow-right-24: quokkacomputing.com](https://www.quokkacomputing.com/)
+
+</div>
 
 Every `.qasm` file in this cookbook is a valid OpenQASM 2.0 program. If you want to go beyond Quokka, the same files run on IBM Quantum, Qiskit, or any other QASM-compatible platform. **Your learning is portable.**
 

@@ -25,8 +25,8 @@ The tone is conversational but rigorous. No hand-waving, no hype. Every claim is
 | # | Recipe | README | QASM | Status |
 |---|--------|--------|------|--------|
 | 01 | Bell State | ✅ 279 lines | ✅ bell.qasm | **Complete** |
-| 02 | Teleportation | ❌ placeholder (9 lines) | ✅ teleport.qasm | **Needs write-up** |
-| 03 | Deutsch-Jozsa | ❌ placeholder (9 lines) | ✅ 2 qasm files | **Needs write-up** |
+| 02 | Teleportation | ✅ ~300 lines | ✅ teleport.qasm | **Complete** |
+| 03 | Deutsch-Jozsa | ✅ ~350 lines | ✅ 2 qasm files | **Complete** |
 | 04 | Bernstein-Vazirani | ✅ 231 lines | ✅ | Complete |
 | 05 | Simon's Problem | ✅ 230 lines | ✅ | Complete |
 | 06 | Grover's Search | ✅ 286 lines | ✅ | Complete |
@@ -50,7 +50,7 @@ The tone is conversational but rigorous. No hand-waving, no hype. Every claim is
 
 ### mkdocs nav
 
-The individual recipe nav entries are **commented out** in `mkdocs.yml`. This was intentional — uncommenting them publishes the recipes. The flat `Recipes: recipes/index.md` entry is the current live nav item.
+All 12 recipe nav entries are **live** in `mkdocs.yml`, organized into Appetizers (01-03), Mains (04-09), and Desserts (10-12).
 
 ### Infrastructure
 
@@ -61,15 +61,13 @@ The individual recipe nav entries are **commented out** in `mkdocs.yml`. This wa
 
 ## Priority work items
 
-1. **Write Recipe 02 (Teleportation) and Recipe 03 (Deutsch-Jozsa).** The QASM files exist; the write-ups need to match the style and depth of Recipe 01. Use Recipe 01 as the gold standard for tone, structure, and level of detail.
+1. **Review all recipes for consistency.** Ensure every recipe follows the template: What are we making? → Ingredients → Background → Method → Taste test → Deep dive → Chef's notes.
 
-2. **Review all recipes for consistency.** Ensure every recipe follows the template: What are we making? → Ingredients → Background → Method → Taste test → Chef's notes.
+2. **Verify GitHub Pages deployment.** Run `mkdocs build` — it should produce a clean build with no warnings.
 
-3. **Uncomment mkdocs nav entries** once recipes are reviewed and ready to publish.
+3. **Add companion Jupyter notebooks.** The `notebooks/` folder is empty. Each recipe could have a notebook that runs the QASM on a simulator and explores parameter variations.
 
-4. **Verify GitHub Pages deployment.** Run `mkdocs build` — it should produce a clean build with no warnings (some warnings about missing recipe READMEs were previously fixed with placeholders).
-
-5. **Replace remaining `XXX` placeholders.** Some files may still reference `https://github.com/XXX/quokka` — replace with `https://www.quokkacomputing.com/`.
+4. **Add circuit diagram images.** Some recipes reference `circuit.png` files that may not exist yet.
 
 ## Recipe template
 

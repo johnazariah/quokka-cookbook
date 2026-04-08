@@ -2,9 +2,11 @@
 
 ## What are we making?
 
-An algorithm that answers a yes-or-no question with a single query — where any classical algorithm might need exponentially many. Given a black-box function $f$ that maps $n$-bit strings to 0 or 1, and the promise that $f$ is either **constant** (same output for all inputs) or **balanced** (outputs 0 for exactly half the inputs and 1 for the other half), determine which type it is.
+An algorithm that answers a yes-or-no question about a function in **one query** — a question that classically requires up to $2^{n-1}+1$ queries in the worst case. This is your first taste of exponential quantum speedup.
 
-Classically, you'd need to check up to $2^{n-1} + 1$ inputs in the worst case. The Deutsch-Jozsa algorithm does it in **one query**. This is your first taste of an exponential quantum speedup.
+Here's the setup: someone gives you a black box (an "oracle") that computes a function $f:\{0,1\}^n \to \{0,1\}$. You're promised that $f$ is either **constant** (same output for all inputs) or **balanced** (outputs 0 for exactly half the inputs, 1 for the other half). Which is it?
+
+Classically, you might need to check just over half the inputs before you know. Quantumly: one shot.
 
 ## Ingredients
 
@@ -14,62 +16,63 @@ Classically, you'd need to check up to $2^{n-1} + 1$ inputs in the worst case. T
 - 1 X gate (`x`)
 - A [Quokka](https://www.quokkacomputing.com/) (puck or app)
 
-**Prerequisites:** [Recipe 01 — Bell State](../01-bell-state/README.md). You should be comfortable with superposition and what the Hadamard gate does.
+**Prerequisites:** [Recipe 01 — Bell State](../01-bell-state/README.md). You should be comfortable with superposition and the Hadamard gate.
 
-## Background: oracles and the power of asking in superposition
+## Background: constant vs. balanced
 
-Imagine a room with a locked box. Inside is a function $f$ that takes a 2-bit input ($00$, $01$, $10$, or $11$) and returns a single bit ($0$ or $1$). You're told one of two things:
+Suppose $f$ takes 2-bit inputs. There are $2^2 = 4$ possible inputs: `00`, `01`, `10`, `11`.
 
-- **Constant:** $f$ returns the same value for every input (e.g., always 0)
-- **Balanced:** $f$ returns 0 for exactly two inputs and 1 for the other two
+**Constant** means $f$ gives the same answer for all of them:
 
-You can query the box: give it an input, get the output. The question: **is $f$ constant or balanced?**
+| $x$ | $f(x) = 0$ |
+|:---|:---|
+| 00 | 0 |
+| 01 | 0 |
+| 10 | 0 |
+| 11 | 0 |
 
-Classically, in the worst case you check three inputs. If the first two outputs agree, you still don't know — maybe the function is balanced and you got unlucky. You need a third query to be sure.
+**Balanced** means exactly half give 0 and half give 1:
 
-Quantum mechanically, you can query *all inputs simultaneously* using superposition. The Deutsch-Jozsa algorithm does this and extracts the answer from the interference pattern in a single query.
+| $x$ | $f(x) = x_0 \oplus x_1$ |
+|:---|:---|
+| 00 | 0 |
+| 01 | 1 |
+| 10 | 1 |
+| 11 | 0 |
 
-### What's an oracle?
+With 2 bits, a classical algorithm needs at most 3 queries to be certain (if the first two outputs agree, you still don't know — a balanced function could match on those two). For $n$ bits, the worst case is $2^{n-1}+1$ queries.
 
-An oracle is a quantum gate that computes a classical function *reversibly*. For a function $f: \{0,1\}^n \rightarrow \{0,1\}$, the oracle acts as:
-
-$$U_f |x\rangle|y\rangle = |x\rangle|y \oplus f(x)\rangle$$
-
-The input $|x\rangle$ is unchanged; the output qubit $|y\rangle$ gets flipped if $f(x) = 1$. This is reversible (apply it twice and you get back the original state), which is a requirement for quantum gates.
+The Deutsch-Jozsa algorithm: one query, any $n$, 100% correct.
 
 ## Method
 
-We'll run the algorithm for $n = 2$ (two input bits). We provide *two* QASM files: one with a balanced oracle, one with a constant oracle. The algorithm correctly identifies each.
+We'll run two versions: one with a **constant** oracle ($f(x) = 0$, does nothing) and one with a **balanced** oracle ($f(x) = x_0 \oplus x_1$, XOR of the input bits). The same algorithm, different oracles, different results.
 
-### Step 1: Prepare the ancilla
-
-Start by putting the output qubit (q[2]) into the $|{-}\rangle$ state:
+### Step 1: Prepare the ancilla in $|{-}\rangle$
 
 ```
 x q[2];
 h q[2];
 ```
 
-This creates $|{-}\rangle = \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle)$.
+This puts the ancilla qubit into $|{-}\rangle = \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle)$.
 
-Why? This is the **phase kickback trick**. When the oracle flips the ancilla (because $f(x) = 1$), the minus sign in $|{-}\rangle$ gets kicked back as a *phase* on the input register:
+Why? Because of a trick called **phase kickback**. When the oracle flips the ancilla (computing $|y \oplus f(x)\rangle$), the $|{-}\rangle$ state converts that bit flip into a *phase* on the input register:
 
-$$U_f |x\rangle|{-}\rangle = (-1)^{f(x)} |x\rangle|{-}\rangle$$
+$$|x\rangle|{-}\rangle \xrightarrow{U_f} (-1)^{f(x)}|x\rangle|{-}\rangle$$
 
-The ancilla doesn't change — but the input picks up a phase of $-1$ whenever $f(x) = 1$. This converts the oracle from flipping a bit to marking amplitudes, which is exactly what we need for interference.
+The ancilla itself is unchanged. The oracle's effect has been "kicked back" as a phase $(-1)^{f(x)}$ on the input. This is the key insight — it turns a function evaluation into an interference pattern.
 
-### Step 2: Create superposition over all inputs
-
-Apply Hadamard to each input qubit:
+### Step 2: Put the input register in superposition
 
 ```
 h q[0];
 h q[1];
 ```
 
-The input register is now in an equal superposition of all four inputs:
+The input register is now an equal superposition of all 4 basis states:
 
-$$|{+}{+}\rangle = \frac{1}{2}(|00\rangle + |01\rangle + |10\rangle + |11\rangle)$$
+$$\frac{1}{2}(|00\rangle + |01\rangle + |10\rangle + |11\rangle)$$
 
 Combined with the ancilla, the full state is:
 
@@ -77,106 +80,63 @@ $$\frac{1}{2}(|00\rangle + |01\rangle + |10\rangle + |11\rangle) \otimes |{-}\ra
 
 ### Step 3: Apply the oracle
 
-This is where the two versions diverge.
-
-#### Constant oracle: $f(x) = 0$ for all $x$
+**Constant oracle** ($f(x) = 0$):
 
 ```
 // Do nothing — the constant-zero oracle is the identity
 ```
 
-Since $f(x) = 0$ for all inputs, the oracle never flips the ancilla. The state is unchanged. Every amplitude keeps its original sign.
+Since $f(x) = 0$ for all $x$, the phase is $(-1)^0 = 1$ for every term. Nothing changes.
 
-#### Balanced oracle: $f(x) = x_0 \oplus x_1$
+**Balanced oracle** ($f(x) = x_0 \oplus x_1$):
 
 ```
 cx q[0], q[2];
 cx q[1], q[2];
 ```
 
-This implements $f(x) = x_0 \oplus x_1$ (XOR of the two input bits). It returns 1 when the inputs differ ($01$ and $10$) and 0 when they match ($00$ and $11$) — exactly half and half, so it's balanced.
+Each CNOT flips the ancilla if the corresponding input bit is 1. The net effect: the ancilla is flipped if and only if $x_0 \neq x_1$ — i.e., $f(x) = x_0 \oplus x_1$. Thanks to phase kickback, this applies $(-1)^{x_0 \oplus x_1}$ to each input term:
 
-Using the phase kickback, the state becomes:
+$$\frac{1}{2}\Big[(-1)^0|00\rangle + (-1)^1|01\rangle + (-1)^1|10\rangle + (-1)^0|11\rangle\Big] \otimes |{-}\rangle$$
 
-$$\frac{1}{2}((-1)^{f(00)}|00\rangle + (-1)^{f(01)}|01\rangle + (-1)^{f(10)}|10\rangle + (-1)^{f(11)}|11\rangle) \otimes |{-}\rangle$$
+$$= \frac{1}{2}(|00\rangle - |01\rangle - |10\rangle + |11\rangle) \otimes |{-}\rangle$$
 
-For $f(x) = x_0 \oplus x_1$: $f(00) = 0$, $f(01) = 1$, $f(10) = 1$, $f(11) = 0$:
+The signs encode $f$.
 
-$$\frac{1}{2}(|00\rangle - |01\rangle - |10\rangle + |11\rangle) \otimes |{-}\rangle$$
-
-### Step 4: Apply Hadamard to the input register
+### Step 4: Hadamard the input register
 
 ```
 h q[0];
 h q[1];
 ```
 
-The Hadamard transform converts the phase pattern into an amplitude pattern. This is where interference does the heavy lifting.
+The Hadamard transform "decodes" the sign pattern. This is where interference happens.
 
-**Constant case:** all signs positive → Hadamard maps back to $|00\rangle$. Constructive interference on $|00\rangle$, destructive on everything else.
+**Constant oracle:** The state before this step is $\frac{1}{2}(|00\rangle + |01\rangle + |10\rangle + |11\rangle)$ — all phases positive. Applying $H \otimes H$:
 
-**Balanced case:** the signs $+, -, -, +$ form a pattern that the Hadamard maps to $|11\rangle$. Constructive interference on $|11\rangle$, destructive on $|00\rangle$.
+$$H^{\otimes 2} \cdot \frac{1}{2}(|00\rangle + |01\rangle + |10\rangle + |11\rangle) = |00\rangle$$
 
-!!! info "The math in detail"
-    For the balanced oracle, the input register before the final Hadamard is:
+All terms interfere constructively into $|00\rangle$.
 
-    $$\frac{1}{2}(|00\rangle - |01\rangle - |10\rangle + |11\rangle) = \frac{1}{2}(|0\rangle - |1\rangle)(|0\rangle - |1\rangle) = |{-}{-}\rangle$$
+**Balanced oracle:** The state is $\frac{1}{2}(|00\rangle - |01\rangle - |10\rangle + |11\rangle)$. Applying $H \otimes H$:
 
-    Applying $H \otimes H$:
+$$H^{\otimes 2} \cdot \frac{1}{2}(|00\rangle - |01\rangle - |10\rangle + |11\rangle) = |11\rangle$$
 
-    $$H|{-}\rangle \otimes H|{-}\rangle = |1\rangle \otimes |1\rangle = |11\rangle$$
+The negative phases cause *destructive* interference on $|00\rangle$ and *constructive* interference on $|11\rangle$.
 
-    For the constant oracle, the input register is:
-
-    $$\frac{1}{2}(|00\rangle + |01\rangle + |10\rangle + |11\rangle) = |{+}{+}\rangle$$
-
-    Applying $H \otimes H$:
-
-    $$H|{+}\rangle \otimes H|{+}\rangle = |0\rangle \otimes |0\rangle = |00\rangle$$
-
-### Step 5: Measure
+### Step 5: Measure the input register
 
 ```
 measure q[0] -> c[0];
 measure q[1] -> c[1];
 ```
 
-The decision rule is simple:
+- **Constant oracle → always `00`**: constructive interference piles all amplitude onto $|00\rangle$.
+- **Balanced oracle → never `00`**: destructive interference on $|00\rangle$ means we always get something else. For our balanced function, we always get `11`.
 
-- **All zeros** ($|00\rangle$) → $f$ is **constant**
-- **Anything else** → $f$ is **balanced**
-
-No probability, no statistics, no repeated runs needed. One shot, deterministic answer.
+The rule: **if the measurement is all zeros, the function is constant. If it's anything else, the function is balanced.** One query. Done.
 
 ## The complete circuits
-
-### Balanced oracle ($f(x) = x_0 \oplus x_1$)
-
-Available as [`deutsch_jozsa_balanced.qasm`](deutsch_jozsa_balanced.qasm):
-
-```
-OPENQASM 2.0;
-include "qelib1.inc";
-
-qreg q[3];
-creg c[2];
-
-x q[2];
-h q[2];
-
-h q[0];
-h q[1];
-
-// Oracle: f(x) = x0 XOR x1
-cx q[0], q[2];
-cx q[1], q[2];
-
-h q[0];
-h q[1];
-
-measure q[0] -> c[0];
-measure q[1] -> c[1];
-```
 
 ### Constant oracle ($f(x) = 0$)
 
@@ -186,220 +146,175 @@ Available as [`deutsch_jozsa_constant.qasm`](deutsch_jozsa_constant.qasm):
 OPENQASM 2.0;
 include "qelib1.inc";
 
-qreg q[3];
-creg c[2];
+qreg q[3];   // q[0], q[1] = input; q[2] = ancilla
+creg c[2];   // measure input register only
 
+// Step 1: Ancilla in |−⟩
 x q[2];
 h q[2];
 
+// Step 2: Input in superposition
 h q[0];
 h q[1];
 
-// Oracle: f(x) = 0 (do nothing)
+// Step 3: Oracle f(x) = 0 — identity (do nothing)
 
+// Step 4: Hadamard on input
 h q[0];
 h q[1];
 
+// Step 5: Measure input
 measure q[0] -> c[0];
 measure q[1] -> c[1];
 ```
 
-As circuit diagrams:
+### Balanced oracle ($f(x) = x_0 \oplus x_1$)
 
-**Balanced** ($f(x) = x_0 \oplus x_1$):
+Available as [`deutsch_jozsa_balanced.qasm`](deutsch_jozsa_balanced.qasm):
 
-![Deutsch-Jozsa balanced circuit](circuit_balanced.png)
+```
+OPENQASM 2.0;
+include "qelib1.inc";
 
-**Constant** ($f(x) = 0$):
+qreg q[3];   // q[0], q[1] = input; q[2] = ancilla
+creg c[2];   // measure input register only
 
-![Deutsch-Jozsa constant circuit](circuit_constant.png)
+// Step 1: Ancilla in |−⟩
+x q[2];
+h q[2];
+
+// Step 2: Input in superposition
+h q[0];
+h q[1];
+
+// Step 3: Oracle f(x) = x0 XOR x1
+cx q[0], q[2];
+cx q[1], q[2];
+
+// Step 4: Hadamard on input
+h q[0];
+h q[1];
+
+// Step 5: Measure input
+measure q[0] -> c[0];
+measure q[1] -> c[1];
+```
+
+Circuit diagrams:
+
+**Constant:**
+```
+q[0] : ─── H ─────────── H ─── M
+q[1] : ─── H ─────────── H ─── M
+q[2] : ─ X ─ H ──────────────────
+```
+
+**Balanced:**
+```
+q[0] : ─── H ──────●──── H ─── M
+                    │
+q[1] : ─── H ──────│──●─ H ─── M
+                    │  │
+q[2] : ─ X ─ H ────X──X──────────
+```
 
 ## Taste test
 
-### Run the balanced oracle
+Paste each circuit into your Quokka:
 
-Paste `deutsch_jozsa_balanced.qasm` into your Quokka. You should see:
-
+**Constant oracle:**
 ```
-{'11': 1024}
+{'00': 1.0}
 ```
+Always `00`. The function is constant. ✓
 
-Result is `11` — **not all zeros** — so the function is **balanced**. Correct!
-
-### Run the constant oracle
-
-Paste `deutsch_jozsa_constant.qasm` into your Quokka. You should see:
-
+**Balanced oracle:**
 ```
-{'00': 1024}
+{'11': 1.0}
 ```
+Always `11` — not `00`, so the function is balanced. ✓
 
-Result is `00` — **all zeros** — so the function is **constant**. Correct!
-
-Both answers are deterministic — you get the right answer with 100% probability in a single query. A classical algorithm would need up to 3 queries for $n = 2$, and up to $2^{n-1} + 1$ queries in general.
+**Try it:** Modify the balanced oracle. Replace `cx q[0], q[2]; cx q[1], q[2];` with just `cx q[0], q[2];` (implementing $f(x) = x_0$). This is also balanced. What do you get? (Spoiler: `10` — still not `00`, so the algorithm correctly identifies it.)
 
 ## Deep dive
 
-??? abstract "General $n$-qubit proof of correctness"
+??? abstract "Phase kickback — the mechanism behind the magic"
 
-    The recipe demonstrates $n = 2$, but the algorithm works for any $n$. Here is the general proof.
+    Phase kickback is the single most important trick in quantum computing. Let's unpack it.
 
-    **Setup:** $n$ input qubits initialised to $|0\rangle$ and one ancilla initialised to $|1\rangle$.
+    An oracle $U_f$ acts as: $U_f|x\rangle|y\rangle = |x\rangle|y \oplus f(x)\rangle$. If the ancilla is $|{-}\rangle = \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle)$:
 
-    **Step 1 — Prepare $|{-}\rangle$ on the ancilla and $H^{\otimes n}|0\rangle^{\otimes n}$ on the input:**
-
-    $$|0\rangle^{\otimes n}|1\rangle \xrightarrow{H^{\otimes (n+1)}} \left(\frac{1}{\sqrt{2^n}} \sum_{x \in \{0,1\}^n} |x\rangle\right) \otimes |{-}\rangle$$
-
-    **Step 2 — Apply the oracle $U_f$:**
-
-    Using the phase kickback identity $U_f|x\rangle|{-}\rangle = (-1)^{f(x)}|x\rangle|{-}\rangle$:
-
-    $$\frac{1}{\sqrt{2^n}} \sum_{x} (-1)^{f(x)} |x\rangle \otimes |{-}\rangle$$
-
-    **Step 3 — Apply $H^{\otimes n}$ to the input register.**
-
-    The key identity: $H^{\otimes n}|x\rangle = \frac{1}{\sqrt{2^n}} \sum_{z} (-1)^{x \cdot z} |z\rangle$, where $x \cdot z = \bigoplus_i x_i z_i$ is the bitwise inner product modulo 2.
-
-    So:
-
-    $$H^{\otimes n} \left[\frac{1}{\sqrt{2^n}} \sum_{x} (-1)^{f(x)} |x\rangle\right] = \sum_{z} \left[\frac{1}{2^n} \sum_{x} (-1)^{f(x) + x \cdot z}\right] |z\rangle$$
-
-    **Step 4 — Measure.** The probability of outcome $|0\rangle^{\otimes n}$ is:
-
-    $$\Pr(0^n) = \left|\frac{1}{2^n} \sum_{x} (-1)^{f(x)}\right|^2$$
-
-    **Constant case:** $f(x) = c$ for all $x$. Then $\sum_x (-1)^c = (-1)^c \cdot 2^n$, so $\Pr(0^n) = |(-1)^c|^2 = 1$.
-
-    **Balanced case:** Exactly half the $(-1)^{f(x)}$ terms are $+1$ and half are $-1$, so $\sum_x (-1)^{f(x)} = 0$, giving $\Pr(0^n) = 0$.
-
-    Therefore: measure $0^n$ → constant; measure anything else → balanced. The answer is always deterministic and always correct. ∎
-
-??? abstract "The Hadamard transform as a Fourier transform over $\mathbb{Z}_2^n$"
-
-    The $n$-qubit Hadamard transform $H^{\otimes n}$ is the **discrete Fourier transform over the group $\mathbb{Z}_2^n$** (the group of $n$-bit strings under bitwise XOR).
-
-    For a function $g: \{0,1\}^n \rightarrow \mathbb{C}$ encoded in the amplitudes of a quantum state $|\psi\rangle = \sum_x g(x)|x\rangle$, applying $H^{\otimes n}$ gives:
-
-    $$H^{\otimes n}|\psi\rangle = \sum_z \hat{g}(z)|z\rangle$$
-
-    where $\hat{g}(z) = \frac{1}{\sqrt{2^n}} \sum_x (-1)^{x \cdot z} g(x)$ is the **Walsh-Hadamard transform** of $g$.
-
-    This is a Fourier transform with characters $\chi_z(x) = (-1)^{x \cdot z}$ over $\mathbb{Z}_2^n$. The key properties:
-
-    1. **Parseval's theorem:** $\sum_z |\hat{g}(z)|^2 = \sum_x |g(x)|^2$ (probabilities are preserved)
-
-    2. **Convolution theorem:** Convolution in the $x$-domain becomes pointwise multiplication in the $z$-domain
-
-    3. **Self-inverse:** $H^{\otimes n} \cdot H^{\otimes n} = I$ (the Fourier transform over $\mathbb{Z}_2^n$ is its own inverse up to normalisation)
-
-    **Why this matters for Deutsch-Jozsa:** After the oracle, the amplitudes encode $(-1)^{f(x)} / \sqrt{2^n}$. The Hadamard transform converts this into the Fourier domain. For a constant function, all the energy concentrates at the zero frequency ($z = 0^n$). For a balanced function, the zero frequency vanishes completely. The measurement distinguishes these two cases.
-
-    This Fourier perspective generalises: Bernstein-Vazirani uses the same transform to read off a hidden linear function, and Simon's algorithm uses it to find a hidden period. The Quantum Fourier Transform (QFT) generalises to $\mathbb{Z}_N$, powering Shor's algorithm.
-
-??? abstract "Phase kickback: why it works, formally"
-
-    The phase kickback trick is arguably the single most important technique in quantum computing. Let's derive it cleanly.
-
-    **Setting:** An oracle $U_f$ acts on $n + 1$ qubits:
-
-    $$U_f|x\rangle|y\rangle = |x\rangle|y \oplus f(x)\rangle$$
-
-    **Claim:** If the ancilla is in state $|{-}\rangle = \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle)$, then:
-
-    $$U_f|x\rangle|{-}\rangle = (-1)^{f(x)}|x\rangle|{-}\rangle$$
-
-    **Proof:**
-
-    $$U_f|x\rangle|{-}\rangle = |x\rangle \otimes U_f^{(x)}|{-}\rangle$$
-
-    where $U_f^{(x)}$ flips the ancilla if $f(x) = 1$ and does nothing if $f(x) = 0$.
+    $$U_f|x\rangle|{-}\rangle = |x\rangle \cdot \frac{1}{\sqrt{2}}(|0 \oplus f(x)\rangle - |1 \oplus f(x)\rangle)$$
 
     **Case $f(x) = 0$:**
 
-    $$|{-}\rangle \xrightarrow{\text{no flip}} |{-}\rangle = (-1)^0 |{-}\rangle$$
+    $$|x\rangle \cdot \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle) = |x\rangle|{-}\rangle$$
+
+    No change. Phase $= +1$.
 
     **Case $f(x) = 1$:**
 
-    $$|{-}\rangle = \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle) \xrightarrow{X} \frac{1}{\sqrt{2}}(|1\rangle - |0\rangle) = -\frac{1}{\sqrt{2}}(|0\rangle - |1\rangle) = -|{-}\rangle = (-1)^1|{-}\rangle$$
+    $$|x\rangle \cdot \frac{1}{\sqrt{2}}(|1\rangle - |0\rangle) = -|x\rangle|{-}\rangle$$
 
-    In both cases: $U_f|x\rangle|{-}\rangle = (-1)^{f(x)}|x\rangle|{-}\rangle$. ∎
+    The ancilla returns to $|{-}\rangle$, but a global minus sign appears. This is the **kickback**: the oracle's effect on the ancilla has been transferred to a *phase* on the input register.
 
-    **The key insight:** The ancilla is an eigenvector of the X gate with eigenvalue $-1$. When the oracle conditionally applies X, the eigenvalue "kicks back" as a phase onto the control register. The ancilla ends in exactly the same state — it acts as a catalyst.
+    In general: $U_f|x\rangle|{-}\rangle = (-1)^{f(x)}|x\rangle|{-}\rangle$.
 
-    This works for any unitary $U$ with eigenstate $|u\rangle$ and eigenvalue $e^{i\theta}$: controlled-$U$ on $|x\rangle|u\rangle$ gives $e^{ix\theta}|x\rangle|u\rangle$. This generalisation is the foundation of **quantum phase estimation**, which powers Shor's algorithm.
+    The ancilla is unchanged (it's still $|{-}\rangle$). The information about $f(x)$ lives entirely in the phase of $|x\rangle$. This is why we don't measure the ancilla — it's done its job.
 
-??? abstract "Complexity-theoretic significance: BPP, BQP, and EQP"
+    Phase kickback appears again in Bernstein-Vazirani (Recipe 04), Simon's algorithm (Recipe 05), Grover's search (Recipe 06), and in a more sophisticated form in quantum phase estimation (Recipe 10). Master it here.
 
-    Deutsch-Jozsa is often dismissed as "not useful in practice" because a classical randomised algorithm solves it efficiently: query $f$ a few times, and if you ever see both 0 and 1, it's balanced; if all queries agree, guess constant. With $O(1)$ queries, the error probability is exponentially small.
+??? abstract "The Hadamard transform as Fourier analysis"
 
-    So why does Deutsch-Jozsa matter? Because of what it says about **deterministic** query complexity.
+    Why does applying Hadamards after the oracle reveal whether $f$ is constant or balanced?
 
-    **Query complexity classes:**
+    The $n$-qubit Hadamard transform is:
 
-    | Class | Description | Deutsch-Jozsa queries |
-    |:---|:---|:---|
-    | Deterministic classical | Must be correct with certainty | $2^{n-1} + 1$ |
-    | Randomised classical (BPP) | Correct with high probability | $O(1)$ |
-    | Quantum exact (EQP) | Correct with certainty, quantum | $1$ |
-    | Quantum bounded-error (BQP) | Correct with high probability, quantum | $1$ |
+    $$H^{\otimes n}|x\rangle = \frac{1}{\sqrt{2^n}} \sum_{z \in \{0,1\}^n} (-1)^{x \cdot z} |z\rangle$$
 
-    Deutsch-Jozsa proves that **EQP $\neq$ deterministic P** in the query model — quantum computers with certainty can beat deterministic classical computers exponentially. This was the first formal evidence that quantum computers are more powerful.
+    where $x \cdot z = x_0 z_0 \oplus x_1 z_1 \oplus \cdots$ is the bitwise inner product.
 
-    **The deeper point:** The algorithm demonstrates that quantum parallelism + interference can extract *global properties* of a function (constant vs. balanced) from a single query, whereas classical deterministic algorithms must probe the function locally, one input at a time. This principle — extracting global structure from interference — is the engine behind all quantum speedups.
+    After the oracle (with phase kickback), the input register is:
 
-    Bernstein-Vazirani tightens this further: the quantum algorithm finds a hidden $n$-bit string $s$ in 1 query; the classical deterministic lower bound is $n$ queries. Simon's algorithm then achieves an *exponential* quantum speedup even over randomness, bridging to Shor's algorithm.
+    $$\frac{1}{\sqrt{2^n}} \sum_x (-1)^{f(x)} |x\rangle$$
 
-??? abstract "Other oracle types: constant-1, and beyond XOR"
+    Applying $H^{\otimes n}$ again:
 
-    Our recipe uses $f(x) = 0$ (constant) and $f(x) = x_0 \oplus x_1$ (balanced). Here are implementations for other cases, all on 2 input qubits.
+    $$H^{\otimes n} \cdot \frac{1}{\sqrt{2^n}} \sum_x (-1)^{f(x)} |x\rangle = \frac{1}{2^n} \sum_z \left(\sum_x (-1)^{f(x) + x \cdot z}\right) |z\rangle$$
 
-    **Constant $f(x) = 1$:**
+    The amplitude of $|00\ldots0\rangle$ (i.e., $z = 0$) is:
 
-    The oracle needs to flip the ancilla for every input. But since the ancilla is in $|{-}\rangle$, this just adds a global phase of $-1$, which is unobservable. The circuit is the same as $f(x) = 0$ (identity oracle) — and the algorithm still correctly outputs $|00\rangle$.
+    $$\alpha_0 = \frac{1}{2^n} \sum_x (-1)^{f(x)}$$
 
-    Alternatively, you can implement it explicitly: apply X to the ancilla unconditionally. The global phase makes no difference to the measurement.
+    - **Constant $f$:** All $(-1)^{f(x)}$ terms have the same sign. The sum is $\pm 2^n$. So $|\alpha_0|^2 = 1$.
+    - **Balanced $f$:** Half the terms are $+1$, half are $-1$. The sum is $0$. So $|\alpha_0|^2 = 0$.
 
-    **Balanced $f(x) = x_0$ (depends on first bit only):**
+    This is why measuring all zeros means constant, and any non-zero result means balanced. It's Fourier analysis: the Hadamard transform computes the "DC component" of $(-1)^{f(x)}$, which is nonzero only for constant functions.
 
-    ```
-    // Oracle: f(x) = x0
-    cx q[0], q[2];
-    ```
+??? abstract "Classical lower bound: why this speedup is real"
 
-    The algorithm outputs $|10\rangle$ (non-zero → balanced). ✓
+    **Deterministic:** A classical algorithm that queries $f$ one input at a time needs $2^{n-1} + 1$ queries in the worst case to distinguish constant from balanced. After seeing $2^{n-1}$ identical outputs, you still can't rule out a balanced function (the other half could all be different). One more query settles it.
 
-    **Balanced $f(x) = x_1$ (depends on second bit only):**
+    **Randomised:** A randomised classical algorithm can do better — after $k$ queries that all return the same value, the probability that $f$ is balanced (assuming a uniform prior) is at most $1/2^{k-1}$. So $O(\log(1/\epsilon))$ queries suffice for confidence $1 - \epsilon$. But this is probabilistic; Deutsch-Jozsa is exact.
 
-    ```
-    // Oracle: f(x) = x1
-    cx q[1], q[2];
-    ```
+    **Quantum:** One query. No probability of error. This is a provable (not heuristic) exponential separation between deterministic classical and quantum query complexity.
 
-    The algorithm outputs $|01\rangle$ (non-zero → balanced). ✓
+    The caveat: this is a separation in the **query model**, not in total computation time. The function is given as a black box. In practice, if you know the structure of $f$, classical algorithms might exploit that structure. The Deutsch-Jozsa problem is *artificial* — but the techniques it introduces (phase kickback, Hadamard Fourier transform) are the machinery behind algorithms that solve *real* problems.
 
-    **Balanced $f(x) = x_0 \oplus x_1 \oplus 1$ (negated XOR):**
+??? abstract "From Deutsch to Deutsch-Jozsa"
 
-    ```
-    // Oracle: f(x) = NOT(x0 XOR x1)
-    cx q[0], q[2];
-    cx q[1], q[2];
-    x q[2];
-    ```
+    David Deutsch's original 1985 algorithm was the $n = 1$ case: one input bit, one oracle query. The function $f:\{0,1\} \to \{0,1\}$ is either constant ($f(0) = f(1)$) or balanced ($f(0) \neq f(1)$). Deutsch showed a quantum computer can distinguish them in one query.
 
-    Since $f$ differs from the XOR oracle by a global NOT, the phase kickback differs by $(-1)^1 = -1$ on every term. This global phase doesn't affect the measurement — the algorithm outputs $|11\rangle$ (non-zero → balanced). ✓
+    Deutsch and Jozsa generalised this to $n$ bits in 1992. The algorithm is essentially the same — the Hadamard transform scales naturally. But the speedup grows from a factor of 2 (for $n = 1$) to an exponential separation (for general $n$).
 
-    In general, for $n$ input bits there are $2$ constant functions and $\binom{2^n}{2^{n-1}}$ balanced functions. The algorithm distinguishes between these two classes in one query regardless of which specific function the oracle implements.
+    The Deutsch-Jozsa algorithm is historically important: it was the first problem shown to have an exponential quantum speedup (in the query model). It directly inspired Simon's algorithm (Recipe 05), which in turn inspired Shor's algorithm for factoring.
 
 ## Chef's notes
 
-- **Is this speedup useful?** The Deutsch-Jozsa problem is artificial — nobody actually needs to distinguish constant from balanced functions. But the *technique* is real: querying in superposition and extracting information through interference is the engine behind every quantum algorithm. Think of this as the "Hello, World!" of quantum speedups.
+- **Phase kickback is the technique to internalise.** It appears in nearly every quantum algorithm: Bernstein-Vazirani, Simon, Grover, QPE. If you understand why the $|{-}\rangle$ ancilla converts bit flips to phases, you understand a core piece of quantum computing.
 
-- **Phase kickback is the key insight.** The ancilla trick ($|{-}\rangle$ turning bit flips into phase flips) appears everywhere in quantum computing. You'll see it again in Grover's algorithm, quantum phase estimation, and Shor's algorithm. Master it here and the rest becomes much easier.
+- **We don't measure the ancilla.** The ancilla stays in $|{-}\rangle$ throughout — it's a catalyst. Only the input register carries information about $f$, encoded in phases. This is a recurring pattern.
 
-- **Scaling up.** Our example uses $n = 2$ inputs, but the algorithm works for any $n$. For $n = 10$, a classical algorithm might need 513 queries. Deutsch-Jozsa still needs 1. The circuit is the same structure: $n$ Hadamards, oracle, $n$ Hadamards, measure.
+- **Try building your own oracle.** Any balanced function works. For 2 bits, some options: $f(x) = x_0$ (CNOT from q[0] to q[2]), $f(x) = x_1$ (CNOT from q[1] to q[2]), $f(x) = x_0 \oplus x_1 \oplus 1$ (add an X gate on q[2] after the CNOTs). Run each one and verify you never get `00`.
 
-- **The oracle hides the classical function.** In a real application, the oracle would be some complex quantum circuit implementing a function you can query but not inspect. Here we build the oracle ourselves (so we know the answer), but the algorithm doesn't use that knowledge — it discovers the answer from the interference pattern.
-
-- **Bernstein-Vazirani is the next step.** If Deutsch-Jozsa asks "constant or balanced?", Bernstein-Vazirani asks "what's the hidden string?" — same circuit structure, deeper question. That's coming in a future recipe.
-
-- **Why we provide two QASM files.** Unlike Recipes 01 and 02, this recipe has two circuits to run — one for each type of oracle. Run both and verify the algorithm gets the right answer each time. This is the best way to see that the same algorithm handles both cases correctly.
+- **If you liked this, try:** Recipe 04 (Bernstein-Vazirani) uses the exact same circuit structure but extracts more information — not just "constant or balanced?" but the *actual hidden string*. It's a direct upgrade.

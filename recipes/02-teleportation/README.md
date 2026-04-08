@@ -2,143 +2,129 @@
 
 ## What are we making?
 
-A protocol that transmits an unknown quantum state from one qubit to another — without physically moving the qubit. Alice has a qubit in some state she wants to send to Bob. Using a shared Bell pair and two classical bits of communication, Bob ends up with a perfect copy of Alice's original state. The original is destroyed in the process (as it must be — quantum mechanics forbids copying).
+A protocol that transmits the *exact* quantum state of one qubit to another — without physically moving the qubit. Alice has a qubit in some state $|\psi\rangle$. She wants Bob to have that state, but she can't send the qubit itself. Using a shared Bell pair and two classical bits, she can **teleport** $|\psi\rangle$ to Bob's qubit.
 
-This is **quantum teleportation**, arguably the most beautiful protocol in quantum information. It was proposed by Bennett, Brassard, Crépeau, Jozsa, Peres, and Wootman in 1993, and it's the foundation of quantum networks, quantum error correction, and measurement-based quantum computing.
+This isn't science fiction — it's the backbone of quantum networking, quantum error correction, and measurement-based computation. And it takes only 6 gates.
 
 ## Ingredients
 
-- 3 qubits
+- 3 qubits (`q[0]` = Alice's message, `q[1]` = Alice's half of the Bell pair, `q[2]` = Bob's half)
 - 1 X gate (`x`)
 - 2 Hadamard gates (`h`)
 - 2 CNOT gates (`cx`)
-- 1 conditional-X gate
-- 1 conditional-Z gate
+- 1 Z gate (`z`)
+- Classical-controlled operations (`if`)
 - A [Quokka](https://www.quokkacomputing.com/) (puck or app)
 
-**Prerequisites:** [Recipe 01 — Bell State](../01-bell-state/README.md). You should understand entanglement and the Bell state $|\Phi^+\rangle$ before continuing.
+**Prerequisites:** [Recipe 01 — Bell State](../01-bell-state/README.md). You should understand entanglement and the Bell state $|\Phi^+\rangle$.
 
-## Background: why can't you just copy a qubit?
+## Background: why can't Alice just copy the qubit?
 
-In classical computing, copying is free. You can duplicate a file, clone a variable, broadcast a message. But the **no-cloning theorem** says you cannot copy an arbitrary unknown quantum state. There is no quantum operation that takes $|\psi\rangle$ and produces $|\psi\rangle \otimes |\psi\rangle$.
+You might think: if Alice knows the state $|\psi\rangle$, can't she just tell Bob what it is? Or make a copy and send that?
 
-This sounds like a limitation, but it's actually what makes quantum cryptography secure — and it's what makes teleportation non-trivial. If you could copy qubits, teleportation would be boring. Because you can't, moving quantum information requires a clever workaround: consume an entangled pair and send two classical bits.
+No. Two fundamental theorems forbid it:
 
-## The setup
+1. **No-cloning theorem.** There is no quantum operation that takes an unknown state $|\psi\rangle$ and produces two copies $|\psi\rangle \otimes |\psi\rangle$. This is a consequence of the linearity of quantum mechanics — if you could clone, you could distinguish non-orthogonal states, which violates unitarity.
 
-Three qubits, two players:
+2. **Measurement destroys.** If Alice measures $|\psi\rangle$ to learn what it is, she collapses it. She gets one classical bit (0 or 1), but the continuous information in the amplitudes $\alpha$ and $\beta$ is lost forever. One measurement can't capture a state from a continuous space.
 
-| Qubit | Owner | Role |
-|-------|-------|------|
-| `q[0]` | Alice | The state she wants to teleport |
-| `q[1]` | Alice | Her half of the shared Bell pair |
-| `q[2]` | Bob | His half of the shared Bell pair |
-
-Alice wants to send the state of `q[0]` to Bob, who is far away. She can send classical bits (phone, email, carrier pigeon) but cannot physically ship a qubit.
+Teleportation solves this: Alice transfers $|\psi\rangle$ to Bob without ever learning what $|\psi\rangle$ is, and without cloning it. The original is destroyed in the process (as it must be — no-cloning is not violated).
 
 ## Method
 
-### Step 1: Prepare the state to teleport
+We'll teleport the state $|1\rangle$ from Alice to Bob. (In the code we use `x q[0]` to prepare this state. You could prepare any state $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$ — the protocol works the same.)
 
-For this recipe, we'll teleport the state $|1\rangle$. We prepare it by flipping qubit 0:
+### Step 1: Prepare the state to teleport
 
 ```
 x q[0];
 ```
 
-In a real application, `q[0]` could be in any state $\alpha|0\rangle + \beta|1\rangle$ — the protocol works regardless. We use $|1\rangle$ because it's easy to verify: after teleportation, Bob's qubit must always measure 1.
+Alice's qubit `q[0]` is now in state $|1\rangle$. This is her "message" — the state she wants to send to Bob.
 
-!!! note "Why not teleport a superposition?"
-    We could prepare $|+\rangle$ (apply H instead of X), but then the output is statistical — harder to confirm it worked in a single run. Teleporting $|1\rangle$ gives a deterministic check: if Bob ever measures 0, something broke.
+The full 3-qubit state is:
 
-### Step 2: Create the shared Bell pair
+$$|1\rangle \otimes |0\rangle \otimes |0\rangle = |100\rangle$$
 
-Alice and Bob share a Bell pair — the same one from [Recipe 01](../01-bell-state/README.md):
+### Step 2: Create a Bell pair between Alice and Bob
 
 ```
 h q[1];
 cx q[1], q[2];
 ```
 
-This creates the state $|\Phi^+\rangle = \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$ between `q[1]` and `q[2]`.
+This puts `q[1]` (Alice's half) and `q[2]` (Bob's half) into the Bell state $|\Phi^+\rangle = \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$, exactly as in Recipe 01.
 
-The full three-qubit state is now:
+The full state is now:
 
 $$|1\rangle \otimes \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle) = \frac{1}{\sqrt{2}}(|100\rangle + |111\rangle)$$
 
-Alice has qubits 0 and 1. Bob has qubit 2. They may now be separated by any distance — the entanglement persists.
+Alice holds `q[0]` and `q[1]`. Bob holds `q[2]`. They can be in different rooms, different cities — it doesn't matter, as long as the Bell pair was shared in advance.
 
 ### Step 3: Alice's Bell measurement
 
-Alice performs a **Bell measurement** on her two qubits. This is a CNOT followed by a Hadamard — the *reverse* of creating a Bell pair:
+Alice performs a Bell measurement on her two qubits (`q[0]` and `q[1]`):
 
 ```
 cx q[0], q[1];
 h q[0];
-```
 
-Why these gates? The Bell measurement projects Alice's two qubits onto one of the four Bell states. This is the mathematical heart of the protocol.
-
-Let's trace the algebra. Before the Bell measurement, the full state is:
-
-$$\frac{1}{\sqrt{2}}(|100\rangle + |111\rangle)$$
-
-After the CNOT (q[0] controls q[1]):
-
-$$\frac{1}{\sqrt{2}}(|1\mathbf{1}0\rangle + |1\mathbf{0}1\rangle)$$
-
-After the Hadamard on q[0], using $H|1\rangle = \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle)$:
-
-$$\frac{1}{2}\big[(|0\rangle - |1\rangle)|10\rangle + (|0\rangle - |1\rangle)|01\rangle\big]$$
-
-Expanding:
-
-$$\frac{1}{2}\big[|010\rangle - |110\rangle + |001\rangle - |101\rangle\big]$$
-
-Regrouping by Alice's measurement outcomes (first two qubits):
-
-| Alice measures | Bob's qubit is in state | Correction needed |
-|----------------|------------------------|-------------------|
-| `00` | $|1\rangle$ | None |
-| `01` | $|0\rangle$ | Apply X (bit flip) |
-| `10` | $-|1\rangle$ | Apply Z (phase flip) |
-| `11` | $-|0\rangle$ | Apply X then Z |
-
-Wait — read that again. In *every* case, Bob's qubit contains the original state $|1\rangle$, just possibly with a known X and/or Z correction. Alice's measurement hasn't destroyed the information — it's been *transferred* to Bob, encrypted with two classical bits.
-
-### Step 4: Measure Alice's qubits and send the results
-
-```
 measure q[0] -> c0[0];
 measure q[1] -> c1[0];
 ```
 
-Alice measures her two qubits and gets two classical bits. She sends these to Bob through a classical channel (this is the "two bits of classical communication" the protocol requires).
+The CNOT and Hadamard effectively "undo" the Bell-state creation, projecting Alice's two qubits onto one of the four Bell states. This entangles Alice's message with the shared Bell pair, transferring the quantum information to Bob's qubit.
 
-!!! warning "No faster-than-light communication"
-    Before Alice sends her classical bits, Bob's qubit is in a *random* state — equally likely to be $|0\rangle$, $|1\rangle$, $-|0\rangle$, or $-|1\rangle$. He gains no information until Alice's message arrives. Teleportation is constrained by the speed of light, just like everything else.
+Let's trace the math. Before Alice's gates, the state is $\frac{1}{\sqrt{2}}(|100\rangle + |111\rangle)$.
 
-### Step 5: Bob's corrections
+After `cx q[0], q[1]` (CNOT with `q[0]` as control, `q[1]` as target):
 
-Based on Alice's measurement results, Bob applies corrections:
+$$\frac{1}{\sqrt{2}}(|1\mathbf{1}0\rangle + |1\mathbf{0}1\rangle)$$
+
+(The bold digit is `q[1]`, which flipped because the control `q[0]` is $|1\rangle$.)
+
+After `h q[0]` (Hadamard on `q[0]`), recall that $H|1\rangle = \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle)$:
+
+$$\frac{1}{2}\Big[(|0\rangle - |1\rangle)|10\rangle + (|0\rangle - |1\rangle)|01\rangle\Big]$$
+
+Expanding:
+
+$$\frac{1}{2}\Big[|010\rangle - |110\rangle + |001\rangle - |101\rangle\Big]$$
+
+Regrouping by Alice's measurement outcomes (first two qubits):
+
+$$\frac{1}{2}\Big[|00\rangle(|1\rangle) + |01\rangle(|0\rangle) - |10\rangle(|1\rangle) - |11\rangle(|0\rangle)\Big]$$
+
+| Alice measures | Bob's qubit becomes | What Bob needs to do |
+|:---|:---|:---|
+| `00` | $\|1\rangle$ | Nothing — it's already $\|\psi\rangle = \|1\rangle$ |
+| `01` | $\|0\rangle$ | Apply $X$ (bit flip) |
+| `10` | $-\|1\rangle$ | Apply $Z$ (phase flip) |
+| `11` | $-\|0\rangle$ | Apply $Z$ then $X$ |
+
+Alice gets one of four equally likely outcomes. No matter which one, Bob's qubit encodes the original state — possibly with known corrections.
+
+### Step 4: Bob's corrections
+
+Alice sends Bob her two classical measurement bits. Bob applies corrections:
 
 ```
 if(c1==1) x q[2];
 if(c0==1) z q[2];
 ```
 
-- If Alice's Bell-pair qubit (`c1`) measured 1 → Bob applies X (bit flip)
-- If Alice's message qubit (`c0`) measured 1 → Bob applies Z (phase flip)
+- If Alice's `q[1]` measured 1: Bob applies $X$ (bit flip)
+- If Alice's `q[0]` measured 1: Bob applies $Z$ (phase flip)
 
-After correction, Bob's qubit is in exactly the state that Alice's `q[0]` started in: $|1\rangle$.
+After these corrections, Bob's qubit `q[2]` is in the state $|1\rangle$ — exactly the state Alice started with.
 
-### Step 6: Verify
+### Step 5: Verify
 
 ```
 measure q[2] -> c2[0];
 ```
 
-Bob measures his qubit. Since we teleported $|1\rangle$, he should *always* get 1.
+Bob measures his qubit to confirm: he should always get `1`.
 
 ## The complete circuit
 
@@ -153,182 +139,134 @@ creg c0[1];   // Alice's message qubit measurement
 creg c1[1];   // Alice's Bell-pair qubit measurement
 creg c2[1];   // Bob's qubit measurement (the teleported state)
 
-// Prepare the state to teleport — |1⟩
+// Step 1: Prepare the state to teleport — |1⟩
 x q[0];
 
-// Create a Bell pair between q[1] and q[2]
+// Step 2: Create a Bell pair between q[1] and q[2]
 h q[1];
 cx q[1], q[2];
 
-// Alice's Bell measurement
+// Step 3: Alice's Bell measurement
 cx q[0], q[1];
 h q[0];
 
 measure q[0] -> c0[0];
 measure q[1] -> c1[0];
 
-// Bob's corrections
+// Step 4: Bob's corrections (classically controlled)
 if(c1==1) x q[2];
 if(c0==1) z q[2];
 
-// Measure Bob's qubit
+// Step 5: Measure Bob's qubit
 measure q[2] -> c2[0];
 ```
 
 As a circuit diagram:
 
-![Teleportation circuit](circuit.png)
+```
+q[0] (|1⟩) : ── X ─────────────●─── H ─── M ────────────────
+                                │                    ║
+q[1] (|0⟩) : ────────── H ──●──X──────── M ────────║────────
+                             │              ║       ║
+q[2] (|0⟩) : ───────────────X─────── if c1: X ── if c0: Z ── M
+```
 
 ## Taste test
 
 Copy the contents of [`teleport.qasm`](teleport.qasm) and paste it into your Quokka.
 
-You should see output like:
+You should see Bob's qubit (`c2`) always measure `1`, regardless of what Alice's measurements (`c0`, `c1`) were. The full output has 4 equally likely outcomes:
 
 ```
-{'1 0 0': 256, '1 0 1': 260, '1 1 0': 248, '1 1 1': 260}
+{'0 0 1': 0.25, '0 1 1': 0.25, '1 0 1': 0.25, '1 1 1': 0.25}
 ```
 
-The three bits are `c2 c1 c0`. The key observation: **c2 is always 1**. Alice's results (`c1` and `c0`) are uniformly random — each of the four combinations appears about 25% of the time — but Bob's qubit is deterministically 1.
+The last bit (Bob's) is always `1`. The first two bits (Alice's) are uniformly random. This is the hallmark of teleportation: **the message always arrives, regardless of the random measurement outcome**.
 
-If you ever see `c2 = 0`, something went wrong. The teleportation failed.
-
-!!! tip "Try teleporting other states"
-    Replace `x q[0]` with:
-
-    - Nothing (remove the line) → teleport $|0\rangle$ → Bob always measures 0
-    - `h q[0]` → teleport $|+\rangle$ → Bob measures 0 and 1 equally (verify by running many shots)
-    - `rx(pi/3) q[0]` → teleport an arbitrary state → Bob's statistics match the input
+**Try it:** Change `x q[0]` to just remove it entirely (teleporting $|0\rangle$ instead). Now Bob should always measure `0`.
 
 ## Deep dive
 
-??? abstract "General-state teleportation: the full derivation"
+??? abstract "The general case: teleporting an arbitrary state"
 
-    The recipe teleports $|1\rangle$ for easy verification, but the protocol works for *any* state $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$. Here's the complete algebraic derivation.
+    We teleported $|1\rangle$, but the protocol works for *any* state $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$.
 
-    **Initial state:** Alice's qubit is $|\psi\rangle = \alpha|0\rangle + \beta|1\rangle$. The Bell pair is $|\Phi^+\rangle_{12} = \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$.
+    Starting from $|\psi\rangle \otimes |\Phi^+\rangle$:
 
-    $$|\Psi_0\rangle = |\psi\rangle_0 \otimes |\Phi^+\rangle_{12} = (\alpha|0\rangle + \beta|1\rangle) \otimes \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$$
+    $$(\alpha|0\rangle + \beta|1\rangle) \otimes \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle)$$
 
-    $$= \frac{1}{\sqrt{2}}\big[\alpha|000\rangle + \alpha|011\rangle + \beta|100\rangle + \beta|111\rangle\big]$$
+    $$= \frac{1}{\sqrt{2}}\Big[\alpha(|000\rangle + |011\rangle) + \beta(|100\rangle + |111\rangle)\Big]$$
 
-    **After CNOT** (q[0] → q[1]):
+    After CNOT (q[0] → q[1]) and Hadamard on q[0], the state becomes:
 
-    $$|\Psi_1\rangle = \frac{1}{\sqrt{2}}\big[\alpha|000\rangle + \alpha|011\rangle + \beta|110\rangle + \beta|101\rangle\big]$$
+    $$\frac{1}{2}\Big[|00\rangle(\alpha|0\rangle + \beta|1\rangle) + |01\rangle(\alpha|1\rangle + \beta|0\rangle) + |10\rangle(\alpha|0\rangle - \beta|1\rangle) + |11\rangle(\alpha|1\rangle - \beta|0\rangle)\Big]$$
 
-    **After Hadamard on q[0]**, using $H|0\rangle = \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle)$ and $H|1\rangle = \frac{1}{\sqrt{2}}(|0\rangle - |1\rangle)$:
+    So:
 
-    $$|\Psi_2\rangle = \frac{1}{2}\big[\alpha(|0\rangle+|1\rangle)|00\rangle + \alpha(|0\rangle+|1\rangle)|11\rangle + \beta(|0\rangle-|1\rangle)|10\rangle + \beta(|0\rangle-|1\rangle)|01\rangle\big]$$
+    | Alice measures | Bob has | Correction |
+    |:---|:---|:---|
+    | $00$ | $\alpha\|0\rangle + \beta\|1\rangle$ | $I$ (none) |
+    | $01$ | $\alpha\|1\rangle + \beta\|0\rangle$ | $X$ |
+    | $10$ | $\alpha\|0\rangle - \beta\|1\rangle$ | $Z$ |
+    | $11$ | $\alpha\|1\rangle - \beta\|0\rangle$ | $ZX$ |
 
-    Expanding and collecting terms by Alice's two qubits:
+    In every case, Bob recovers $|\psi\rangle$ after applying the correction $\{I, X, Z, ZX\}$. The amplitudes $\alpha$ and $\beta$ are perfectly preserved — even though Alice never learned their values.
 
-    $$|\Psi_2\rangle = \frac{1}{2}\big[|00\rangle(\alpha|0\rangle + \beta|1\rangle) + |01\rangle(\alpha|1\rangle + \beta|0\rangle) + |10\rangle(\alpha|0\rangle - \beta|1\rangle) + |11\rangle(\alpha|1\rangle - \beta|0\rangle)\big]$$
+??? abstract "What teleportation is NOT"
 
-    Reading off Bob's qubit state for each of Alice's outcomes:
+    Common misconceptions:
 
-    | Alice measures | Bob's state | In terms of $\|\psi\rangle$ | Correction |
-    |:---|:---|:---|:---|
-    | $\|00\rangle$ | $\alpha\|0\rangle + \beta\|1\rangle$ | $\|\psi\rangle$ | $I$ |
-    | $\|01\rangle$ | $\alpha\|1\rangle + \beta\|0\rangle$ | $X\|\psi\rangle$ | $X$ |
-    | $\|10\rangle$ | $\alpha\|0\rangle - \beta\|1\rangle$ | $Z\|\psi\rangle$ | $Z$ |
-    | $\|11\rangle$ | $\alpha\|1\rangle - \beta\|0\rangle$ | $XZ\|\psi\rangle$ | $ZX$ |
+    **"Faster-than-light communication."** No. Alice's measurement outcomes are random; they carry no information. Bob can't use his qubit until he receives Alice's classical bits — which travel at most at the speed of light. Teleportation respects relativity.
 
-    In every case, Bob applies at most two Pauli gates (based on Alice's two classical bits) to recover $|\psi\rangle$ perfectly. The teleportation is exact — no approximation, no information loss. ∎
+    **"Copying a quantum state."** No. After teleportation, Alice's original qubit is in state $|0\rangle$ or $|1\rangle$ (collapsed by measurement). The state was *transferred*, not copied. No-cloning holds.
 
-??? abstract "Proof of the no-cloning theorem"
+    **"Transmitting the qubit itself."** No. What's transmitted is the *state* — the quantum information ($\alpha$, $\beta$). The physical qubit stays with Alice. Bob's qubit (which was in a completely different state before) now carries the information.
 
-    **Theorem:** There is no unitary operation $U$ that clones an arbitrary quantum state: $U|\psi\rangle|0\rangle = |\psi\rangle|\psi\rangle$ for all $|\psi\rangle$.
+    **"Useful only for communication."** Actually, teleportation's biggest application is in quantum computing itself. Measurement-based quantum computation (one-way QC) uses teleportation as its fundamental operation. And quantum error correction codes use teleportation-like circuits to move logical qubits.
 
-    **Proof by contradiction:** Suppose such a $U$ exists. Take two arbitrary states $|\psi\rangle$ and $|\phi\rangle$:
+??? abstract "The Bell measurement, deconstructed"
 
-    $$U|\psi\rangle|0\rangle = |\psi\rangle|\psi\rangle$$
-    $$U|\phi\rangle|0\rangle = |\phi\rangle|\phi\rangle$$
+    Alice's circuit — CNOT followed by Hadamard — is performing a **Bell measurement**: projecting her two qubits onto the Bell basis $\{|\Phi^+\rangle, |\Phi^-\rangle, |\Psi^+\rangle, |\Psi^-\rangle\}$.
 
-    Take the inner product of both sides:
+    Why does CNOT + H do this? Because the Bell-state creation circuit is H + CNOT:
 
-    $$\langle\psi|\langle0|U^\dagger U|\phi\rangle|0\rangle = (\langle\psi|\psi\rangle)(\langle\psi|\phi\rangle)$$
+    $$|00\rangle \xrightarrow{H \otimes I} \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle)|0\rangle \xrightarrow{\text{CNOT}} \frac{1}{\sqrt{2}}(|00\rangle + |11\rangle) = |\Phi^+\rangle$$
 
-    Since $U$ is unitary, $U^\dagger U = I$:
+    The inverse is CNOT + H (since both are self-inverse):
 
-    $$\langle\psi|\phi\rangle = \langle\psi|\phi\rangle^2$$
+    $$|\Phi^+\rangle \xrightarrow{\text{CNOT}} \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle)|0\rangle \xrightarrow{H \otimes I} |00\rangle$$
 
-    This equation has only two solutions: $\langle\psi|\phi\rangle = 0$ (the states are orthogonal) or $\langle\psi|\phi\rangle = 1$ (the states are identical). There is no cloning machine that works for arbitrary non-orthogonal states. ∎
+    So CNOT + H maps each Bell state to a unique computational basis state:
 
-    This is why teleportation is non-trivial: you can't just "read" $|\psi\rangle$ and recreate it at Bob's location. The protocol cleverly gets around this by consuming entanglement.
+    | Bell state | After CNOT + H | Measurement |
+    |:---|:---|:---|
+    | $\|\Phi^+\rangle$ | $\|00\rangle$ | `00` |
+    | $\|\Phi^-\rangle$ | $\|10\rangle$ | `10` |
+    | $\|\Psi^+\rangle$ | $\|01\rangle$ | `01` |
+    | $\|\Psi^-\rangle$ | $\|11\rangle$ | `11` |
 
-??? abstract "Why Bob's qubit is random before classical communication — the density matrix perspective"
+    This is elegant: you don't need a special "Bell measurement device." You just reverse the Bell creation circuit and measure in the computational basis.
 
-    A common misconception: "When Alice measures, Bob's qubit instantaneously collapses to a specific state — isn't that faster-than-light communication?"
+??? abstract "Resource cost and classical communication"
 
-    The density matrix formalism shows why it isn't.
+    Teleportation consumes:
 
-    Before Alice measures, the full three-qubit state is $|\Psi_2\rangle$ (from the derivation above). Bob's **reduced density matrix** is obtained by tracing out Alice's qubits:
+    - **1 Bell pair** (shared in advance — the entanglement is "used up")
+    - **2 classical bits** of communication (Alice → Bob)
+    - **1 qubit of quantum information** transferred
 
-    $$\rho_B = \text{Tr}_{01}(|\Psi_2\rangle\langle\Psi_2|)$$
+    This is optimal. You can't teleport with fewer than 2 classical bits (proven by Holevo's theorem — one qubit carries at most one classical bit, but the correction requires two bits of choice among $\{I, X, Z, ZX\}$).
 
-    Computing this (summing the conditional states weighted by their probabilities):
+    The Bell pair is consumed: after the protocol, q[1] and q[2] are no longer entangled. If Alice wants to teleport another qubit, she needs a fresh Bell pair. This makes entanglement a *resource* — created, distributed, consumed.
 
-    $$\rho_B = \frac{1}{4}\big[|\psi\rangle\langle\psi| + X|\psi\rangle\langle\psi|X + Z|\psi\rangle\langle\psi|Z + XZ|\psi\rangle\langle\psi|ZX\big]$$
-
-    Using the identity $\frac{1}{4}(I\rho I + X\rho X + Z\rho Z + Y\rho Y) = \frac{I}{2}$ for any single-qubit $\rho$ (the Pauli twirl):
-
-    $$\rho_B = \frac{I}{2}$$
-
-    Bob's qubit is **maximally mixed** — completely random, containing zero information. No experiment Bob performs on his qubit alone reveals anything about $|\psi\rangle$ until he receives Alice's classical bits.
-
-    After Alice sends her result (say $|00\rangle$), Bob *then* knows his qubit is in state $|\psi\rangle$ and can use it. The information transfer is limited by the speed of the classical channel. No spooky action, no FTL.
-
-??? abstract "Superdense coding: the dual protocol"
-
-    Teleportation and **superdense coding** are duals of each other:
-
-    | Protocol | Consumes | Input | Output |
-    |:---|:---|:---|:---|
-    | Teleportation | 1 Bell pair + 2 classical bits | 1 qubit worth of quantum info | 1 qubit at Bob's end |
-    | Superdense coding | 1 Bell pair + 1 qubit sent | 2 classical bits | 2 classical bits at Bob's end |
-
-    In superdense coding, Alice wants to send two classical bits to Bob. They share a Bell pair. Alice applies one of four operations to her qubit ($I$, $X$, $Z$, $XZ$), then sends it to Bob. Bob performs a Bell measurement on the pair and reads off two bits.
-
-    The circuit:
-
-    ```
-    // Alice encodes two bits (here: 11 → apply ZX)
-    x q[0];
-    z q[0];
-
-    // Bob's Bell measurement (reverse of Bell creation)
-    cx q[0], q[1];
-    h q[0];
-    measure q[0] -> c[0];
-    measure q[1] -> c[1];
-    ```
-
-    One qubit transmitted → two classical bits received. This is the Holevo bound in action: a single qubit normally carries at most 1 classical bit, but with pre-shared entanglement, it carries 2.
-
-    The connection: teleportation trades 2 classical bits → 1 qubit; superdense coding trades 1 qubit → 2 classical bits. Both consume one Bell pair.
-
-??? abstract "Teleportation as gate application — the Choi-Jamiołkowski connection"
-
-    For readers with a quantum information theory background: teleportation is deeply connected to the **Choi-Jamiołkowski isomorphism**.
-
-    The teleportation protocol can be viewed as applying the identity channel $\mathcal{I}$ to $|\psi\rangle$ using the Choi state (the Bell state $|\Phi^+\rangle$) as a resource. More generally, if Alice and Bob share a different entangled state $|\chi\rangle = (I \otimes E)|\Phi^+\rangle$ where $E$ is some operator, then running the teleportation protocol applies $E$ to $|\psi\rangle$ at Bob's end:
-
-    $$\text{Teleport}(|\psi\rangle, |\chi\rangle) = E|\psi\rangle$$
-
-    This is the basis of **gate teleportation**, used in fault-tolerant quantum computing to apply difficult gates (like the T gate) using pre-prepared "magic states." It's also the foundation of **measurement-based quantum computation** (MBQC), where the entire computation consists of single-qubit measurements on a large entangled state.
-
-    The resource cost generalises: teleporting through an entangled state that encodes an $n$-qubit channel requires $2n$ classical bits and $n$ Bell pairs.
+    **Superdense coding** is the flip side: given a shared Bell pair, Alice can transmit **2 classical bits** by sending **1 qubit**. Teleportation trades 1 Bell pair + 2 classical bits for 1 qubit of quantum information. Superdense coding trades 1 Bell pair + 1 qubit for 2 classical bits. They're dual protocols.
 
 ## Chef's notes
 
-- **What was actually "teleported"?** The quantum *state* — the coefficients $\alpha$ and $\beta$ in $\alpha|0\rangle + \beta|1\rangle$. No matter or energy moved. Alice's original qubit is now in a random state (one of the four Bell measurement outcomes). The information exists only at Bob's end. This is consistent with no-cloning: the state wasn't copied, it was *moved*.
+- **Try teleporting different states.** Replace `x q[0]` with `h q[0]` to teleport $|+\rangle = \frac{1}{\sqrt{2}}(|0\rangle + |1\rangle)$. Now Bob's measurement should give 50/50. Or use `ry(0.6) q[0]` for an arbitrary superposition.
 
-- **Why do we need classical communication?** Without Alice's two classical bits, Bob's qubit is in a completely random state. The entanglement alone doesn't transmit information — it only creates correlations. The classical bits tell Bob *which* correlations to exploit. This is why teleportation cannot be used for faster-than-light communication.
+- **The classical bits are essential.** Remove the `if` corrections and Bob's qubit becomes maximally mixed — completely random, no information. This is why teleportation doesn't violate relativity: without Alice's classical message (which travels at ≤ light speed), Bob has noise.
 
-- **Teleportation without conditional gates.** Some quantum platforms don't support classical conditioning (`if` statements in QASM). You can still verify teleportation by post-processing: run the circuit without the `if` gates, record all three measurements, and check that whenever you *would have* applied the correction, the final answer is consistent. This is called **deferred measurement** or **post-selection**.
+- **Teleportation in the real world.** Teleportation has been demonstrated over 1,400 km via satellite (Micius, 2017) and across metropolitan fiber networks. It's the building block of a future quantum internet.
 
-- **The resource cost.** Teleporting one qubit consumes one Bell pair and requires sending two classical bits. This is provably optimal — you can't do it with less.
-
-- **Connection to Recipe 01.** The Bell pair from Recipe 01 is literally the resource consumed by this protocol. Recipe 01 creates it; Recipe 02 uses it.
-
-- **If you liked this, try:** Recipe 03 (Deutsch-Jozsa) uses the Hadamard and CNOT in a completely different way — to solve a computational problem rather than to transmit information. You'll see how interference, which here enables state transfer, can also provide a quantum speedup.
+- **If you liked this, try:** Recipe 03 (Deutsch-Jozsa) uses the same Hadamard + entanglement tools but for a different purpose: solving a problem faster than any classical algorithm. Recipe 04 (Bernstein-Vazirani) extends the same pattern to discover hidden structure.
