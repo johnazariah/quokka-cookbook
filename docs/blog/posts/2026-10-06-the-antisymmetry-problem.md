@@ -26,15 +26,45 @@ social:
 
 # The Antisymmetry Problem: Why Fermions Need Encoding
 
-*For [Alan Geller](https://www.linkedin.com/in/alan-geller-46934b/), who introduced me to quantum computing, gave me free rein to talk about type theory and DSL design, and first walked me through Jordan-Wigner. This series exists because of that introduction.*
+*For* [*Alan Geller*](https://www.linkedin.com/in/alan-geller-46934b/)*, who introduced me to quantum computing, gave me free rein to talk about type theory and DSL design as we designed Q#, and first walked me through Jordan-Wigner. This series exists because of that introduction.*
 
 <!-- more -->
 
 ## The molecule on the bench
 
-Here is the smallest interesting molecule in quantum chemistry: H₂. Two hydrogen atoms, bonded. Two electrons sharing four spin-orbitals — two spatial orbitals (call them $\sigma$ and $\sigma^*$, the bonding and antibonding orbitals), each available in spin-up and spin-down flavours.
+Here is the smallest interesting molecule in quantum chemistry: H₂. Two hydrogen atoms, bonded. Its two electrons occupy four *spin-orbitals*: two spatial orbitals (call them $\sigma$ and $\sigma^*$, the bonding and antibonding orbitals), each available in spin-up and spin-down flavours. A spatial orbital describes where an electron may be found; adding one of its two possible spin states gives a spin-orbital.
 
-The question a quantum chemist asks is: *what is the ground-state energy of this system?* Electronic energies underpin bond lengths, reaction pathways, and material properties; much of computational chemistry begins here. The full Fock space on four modes has dimension $2^4 = 16$, though number conservation restricts the physical two-electron sector to $\binom{4}{2} = 6$ states. For H₂ we can diagonalise this classically, but H₂ lets us build and check the encoding machinery before scale defeats exact classical methods.
+The question a quantum chemist asks is: *what is the ground-state energy of this system?* Electronic energies underpin bond lengths, reaction pathways, and material properties; much of computational chemistry begins here. For H₂ we can diagonalise the model classically, but it lets us build and check the encoding machinery before scale defeats exact classical methods.
+
+Before writing down that machinery, though, we need to slow down. The difficulty is not that an electron needs a grander sort of bit. It is that electrons obey a rule about *being swapped* which the ordinary bits in a quantum register do not.
+
+---
+
+## No name tags, please
+
+### When a swap changes nothing
+
+For two distinguishable particles, we may label their one-particle states $\lvert\alpha\rangle$ and $\lvert\beta\rangle$ and form the product state $\lvert\alpha\rangle \otimes \lvert\beta\rangle$. Swapping the particles gives $\lvert\beta\rangle \otimes \lvert\alpha\rangle$. Both arrangements make sense: a proton and a neutron are different sorts of thing, and the labels tell us which is which.
+
+Identical particles do not come with those identity cards. Exchanging the two labels cannot produce a genuinely different physical state. If $P_{12}$ denotes the operator that swaps the two slots, an allowed state of two identical particles must therefore satisfy either
+
+$$P_{12}\lvert\psi\rangle = +\lvert\psi\rangle \qquad \text{or} \qquad P_{12}\lvert\psi\rangle = -\lvert\psi\rangle.$$
+
+The first possibility is *symmetric*: swapping changes nothing. Particles with symmetric states are *bosons*; photons are the familiar example. The second is *antisymmetric*: swapping contributes a minus sign. Particles with antisymmetric states are *fermions*; electrons are fermions.
+
+This divide is tied to spin, the intrinsic quantum angular momentum of a particle. The spin-statistics connection tells us that integer-spin particles are bosons, while half-integer-spin particles are fermions. An electron has spin one-half, so the minus sign is not a modelling choice. It is part of the furniture.
+
+### Pauli's stern little rule
+
+Let us see what that minus sign does. For two electrons in one-particle states $\lvert\alpha\rangle$ and $\lvert\beta\rangle$, the antisymmetric two-electron state is
+
+$$\lvert\psi\rangle = \frac{1}{\sqrt{2}}\bigl(\lvert\alpha\rangle \otimes \lvert\beta\rangle \;-\; \lvert\beta\rangle \otimes \lvert\alpha\rangle\bigr).$$
+
+Set $\alpha = \beta$ and the state cancels itself:
+
+$$\frac{1}{\sqrt{2}}\bigl(\lvert\alpha\rangle \otimes \lvert\alpha\rangle - \lvert\alpha\rangle \otimes \lvert\alpha\rangle\bigr) = 0.$$
+
+That is the Pauli exclusion principle. Two electrons cannot occupy the same spin-orbital, because there is then no antisymmetric state left for them to occupy. They *can* share a spatial orbital when their spin states differ: that is exactly why the bonding orbital of H₂ can hold its two electrons. Small molecule, large rule.
 
 In the language of second quantisation, the electronic Hamiltonian is
 
@@ -43,32 +73,6 @@ $$H = \sum_{p,q=0}^{3} h_{pq}\, a^\dagger_p a_q \;+\; \frac{1}{2}\sum_{p,q,r,s=0
 where $a^\dagger_p$ creates an electron in spin-orbital $p$ and $a_q$ removes one from spin-orbital $q$. The coefficients $h_{pq}$ (one-electron integrals: kinetic energy and nuclear attraction) and $h_{pqrs}$ (two-electron integrals: electron-electron repulsion) come from classical computation over the molecular orbitals.
 
 To find the ground-state energy on a quantum computer, we need to represent $H$ as an operator on qubits. That means turning $a^\dagger_p$ and $a_q$ into things built from Pauli matrices. And *that* is where electrons start being difficult.
-
----
-
-## Electrons are rude
-
-### The swap that costs a sign
-
-Take two distinguishable particles — say a proton and a neutron — in states $\lvert\alpha\rangle$ and $\lvert\beta\rangle$. Their joint state is the product $\lvert\alpha\rangle \otimes \lvert\beta\rangle$. If you swap them, you get $\lvert\beta\rangle \otimes \lvert\alpha\rangle$. The two states are different, and both are perfectly valid.
-
-Electrons are *identical fermions*. Quantum mechanics requires their joint wavefunction to be *antisymmetric* under exchange:
-
-$$\lvert\psi\rangle = \frac{1}{\sqrt{2}}\bigl(\lvert\alpha\rangle \otimes \lvert\beta\rangle \;-\; \lvert\beta\rangle \otimes \lvert\alpha\rangle\bigr).$$
-
-Notice the minus sign. Swap the two particles and the state picks up a factor of $-1$. This is not optional; it is a fundamental property of half-integer-spin particles, and every electron in the universe obeys it.
-
-### Exclusion for free
-
-Set $\alpha = \beta$ in that antisymmetric state and watch what happens:
-
-$$\frac{1}{\sqrt{2}}\bigl(\lvert\alpha\rangle \otimes \lvert\alpha\rangle - \lvert\alpha\rangle \otimes \lvert\alpha\rangle\bigr) = 0.$$
-
-The state vanishes. Two electrons *cannot* occupy the same spin-orbital. That is the Pauli exclusion principle — not an extra rule, but a consequence of the minus sign.
-
-### Why this is a problem for simulation
-
-A qubit register has distinguishable tensor factors, and local operators on different qubits *commute*: flipping qubit 3 from $\lvert 0\rangle$ to $\lvert 1\rangle$ is a local operation that does not know or care what qubits 0, 1, and 2 are doing. Fermionic creation operators, by contrast, *anticommute*. Creating an electron in mode 3 — where each spin-orbital is one *mode* of the fermionic system — must apply a phase that depends on *how many of the lower modes are already occupied*. The encoding's job is to build that non-local sign structure into the qubit operators.
 
 ---
 
@@ -90,6 +94,10 @@ $$a^\dagger_j \lvert \ldots, 0_j, \ldots\rangle = (-1)^{\sum_{k<j} n_k}\, \lvert
 $$a_j \lvert \ldots, 1_j, \ldots\rangle = (-1)^{\sum_{k<j} n_k}\, \lvert \ldots, 0_j, \ldots\rangle.$$
 
 The crucial ingredient is the *parity phase* $(-1)^{\sum_{k<j} n_k}$: the sign depends on the total occupation of all modes with index less than $j$. This is what enforces antisymmetry. Creating an electron in mode 3 when modes 0 and 1 are occupied gives $(-1)^2 = +1$; if only mode 0 is occupied, it gives $(-1)^1 = -1$. The encoding must reproduce this dependence exactly.
+
+### Where the register trips
+
+A qubit register has distinguishable tensor factors, and local operators on different qubits *commute*: flipping qubit 3 from $\lvert 0\rangle$ to $\lvert 1\rangle$ is a local operation that does not know or care what qubits 0, 1, and 2 are doing. Fermionic creation operators, by contrast, *anticommute*. Creating an electron in mode 3 — where each spin-orbital is one *mode* of the fermionic system — must apply a phase that depends on *how many of the lower modes are already occupied*. The encoding's job is to build that non-local sign structure into the qubit operators.
 
 ---
 
@@ -147,7 +155,7 @@ That is exactly the parity phase the CAR demands. The Jordan-Wigner (JW) transfo
 For our 4-mode hydrogen molecule, the four creation operators under JW are:
 
 | Mode $j$ | $a^\dagger_j$ (Jordan-Wigner) | Pauli weight |
-|-----------|-------------------------------|:------------:|
+| --- | --- | :---: |
 | 0 | $\frac{1}{2}(X_0 - iY_0)$ | 1 |
 | 1 | $\frac{1}{2}(X_1 - iY_1) \otimes Z_0$ | 2 |
 | 2 | $\frac{1}{2}(X_2 - iY_2) \otimes Z_1 \otimes Z_0$ | 3 |
@@ -160,7 +168,7 @@ The *Pauli weight* of an operator is the number of qubits it acts on non-trivial
 For $N$ modes, the creation operator for mode $j$ has Pauli weight $j + 1$. The worst case is mode $N - 1$, with weight $N$. The average across all modes is $(N + 1) / 2$.
 
 | System | Modes $N$ | Max JW weight | Worst-case JW string |
-|--------|:---------:|:-------------:|----------------------|
+| --- | :---: | :---: | --- |
 | H₂ (minimal basis) | 4 | 4 | Weight-4 Pauli string |
 | H₂O (STO-3G basis) | 14 | 14 | Weight-14 Pauli string |
 | FeMoCo (Reiher et al. active space) | 108 | 108 | Weight-108 Pauli string |
@@ -233,6 +241,8 @@ The molecule on the bench is the same — H₂, four spin-orbitals, two electron
 
 ## References
 
+- W. Pauli, "Über den Zusammenhang des Abschlusses der Elektronengruppen im Atom mit der Komplexstruktur der Spektren," *Zeitschrift für Physik* **31**, 765–783 (1925). [doi:10.1007/BF02980631](https://doi.org/10.1007/BF02980631)
+- W. Pauli, "The Connection Between Spin and Statistics," *Physical Review* **58**, 716–722 (1940). [doi:10.1103/PhysRev.58.716](https://doi.org/10.1103/PhysRev.58.716)
 - P. Jordan and E. Wigner, "Über das Paulische Äquivalenzverbot," *Zeitschrift für Physik* **47**, 631–651 (1928). [doi:10.1007/BF01331938](https://doi.org/10.1007/BF01331938)
 - S. B. Bravyi and A. Yu. Kitaev, "Fermionic quantum computation," *Annals of Physics* **298**, 210–226 (2002). [doi:10.1006/aphy.2002.6254](https://doi.org/10.1006/aphy.2002.6254), [arXiv:quant-ph/0003137](https://arxiv.org/abs/quant-ph/0003137)
 - P. M. Fenwick, "A new data structure for cumulative frequency tables," *Software: Practice and Experience* **24**, 327–336 (1994). [doi:10.1002/spe.4380240306](https://doi.org/10.1002/spe.4380240306)
