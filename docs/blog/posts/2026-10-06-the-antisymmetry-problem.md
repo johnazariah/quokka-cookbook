@@ -54,6 +54,8 @@ The first possibility is *symmetric*: swapping changes nothing. Particles with s
 
 This divide is tied to spin, the intrinsic quantum angular momentum of a particle. The spin-statistics connection tells us that integer-spin particles are bosons, while half-integer-spin particles are fermions. An electron has spin one-half, so the minus sign is not a modelling choice. It is part of the furniture.
 
+The proof of the spin-statistics connection belongs to relativistic quantum field theory; we are not going to smuggle it into a post about encodings. We take its consequence for electrons and follow it: antisymmetry means that the mathematical operations which add and remove electrons must anticommute. A qubit register does not provide that rule automatically. That is the engineering problem before us.
+
 ### Pauli's stern little rule
 
 Let us see what that minus sign does. For two electrons in one-particle states $\lvert\alpha\rangle$ and $\lvert\beta\rangle$, the antisymmetric two-electron state is
@@ -97,7 +99,7 @@ The crucial ingredient is the *parity phase* $(-1)^{\sum_{k<j} n_k}$: the sign d
 
 ### Where the register trips
 
-A qubit register has distinguishable tensor factors, and local operators on different qubits *commute*: flipping qubit 3 from $\lvert 0\rangle$ to $\lvert 1\rangle$ is a local operation that does not know or care what qubits 0, 1, and 2 are doing. Fermionic creation operators, by contrast, *anticommute*. Creating an electron in mode 3 — where each spin-orbital is one *mode* of the fermionic system — must apply a phase that depends on *how many of the lower modes are already occupied*. The encoding's job is to build that non-local sign structure into the qubit operators.
+Here is the promised mismatch. A qubit register has distinguishable tensor factors, and local operators on different qubits *commute*: flipping qubit 3 from $\lvert 0\rangle$ to $\lvert 1\rangle$ is a local operation that does not know or care what qubits 0, 1, and 2 are doing. Fermionic creation operators, by contrast, *anticommute*. Creating an electron in mode 3 — where each spin-orbital is one *mode* of the fermionic system — must apply a phase that depends on *how many of the lower modes are already occupied*. The encoding's job is to build that non-local sign structure into the qubit operators.
 
 ---
 
